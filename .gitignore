@@ -1,0 +1,5 @@
+server/bin
+server/ipch
+*.sdf
+server/openni/*
+server/deps/*
