@@ -28,6 +28,7 @@
 	
 	import org.as3kinect.as3kinect;
 	import org.as3kinect.as3kinectSocket;
+	import org.as3kinect.objects.skeleton3d;
 	import org.as3kinect.events.as3kinectSocketEvent;
 	import org.as3kinect.events.as3kinectWrapperEvent;
 	
@@ -58,24 +59,7 @@
 			
 			/* Init data out buffer */
 			_data = new ByteArray();
-			
-			/* Init skeleton objects */
-			_skel = new Object();
-			_skel.head = new Object();
-			_skel.neck = new Object();
-			_skel.l_shoulder = new Object();
-			_skel.l_elbow = new Object();
-			_skel.l_hand = new Object();
-			_skel.r_shoulder = new Object();
-			_skel.r_elbow = new Object();
-			_skel.r_hand = new Object();
-			_skel.torso = new Object();
-			_skel.l_hip = new Object();
-			_skel.l_knee = new Object();
-			_skel.l_foot = new Object();
-			_skel.r_hip = new Object();
-			_skel.r_knee = new Object();
-			_skel.r_foot = new Object();
+			_skel = new skeleton3d();
 			_tracked_users = new Array();
 		}
 		
