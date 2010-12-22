@@ -108,7 +108,7 @@
 							//dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_DEPTH, event.data));
 						break;
 						case 2: //SKEL received
-							as3kinect.byteToSkel(_skel, event.data.buffer);
+							_skel.updateFromBytes(event.data.buffer);
 							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_SKEL, _skel));
 							_skel_buff_busy = false;
 						break;

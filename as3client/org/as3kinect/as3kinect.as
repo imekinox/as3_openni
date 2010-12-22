@@ -50,55 +50,5 @@
 		public static const RAW_IMG_SIZE:int = IMG_WIDTH * IMG_HEIGHT * 4;
 		public static const DATA_IN_SIZE:int = 3 * 2 + 3 * 8;
 		public static const COMMAND_SIZE:int = 6;
-		
-		public static function byteToSkel(_skel:Object, ba:ByteArray){
-			_skel.user_id = ba.readInt();
-			_skel.head.x = ba.readFloat();
-			_skel.head.y = ba.readFloat();
-			_skel.head.z = ba.readFloat();
-			_skel.neck.x = ba.readFloat();
-			_skel.neck.y = ba.readFloat();
-			_skel.neck.z = ba.readFloat();
-			_skel.l_shoulder.x = ba.readFloat();
-			_skel.l_shoulder.y = ba.readFloat();
-			_skel.l_shoulder.z = ba.readFloat();
-			_skel.l_elbow.x = ba.readFloat();
-			_skel.l_elbow.y = ba.readFloat();
-			_skel.l_elbow.z = ba.readFloat();
-			_skel.l_hand.x = ba.readFloat();
-			_skel.l_hand.y = ba.readFloat();
-			_skel.l_hand.z = ba.readFloat();
-			_skel.r_shoulder.x = ba.readFloat();
-			_skel.r_shoulder.y = ba.readFloat();
-			_skel.r_shoulder.z = ba.readFloat();
-			_skel.r_elbow.x = ba.readFloat();
-			_skel.r_elbow.y = ba.readFloat();
-			_skel.r_elbow.z = ba.readFloat();
-			_skel.r_hand.x = ba.readFloat();
-			_skel.r_hand.y = ba.readFloat();
-			_skel.r_hand.z = ba.readFloat();
-			_skel.torso.x = ba.readFloat();
-			_skel.torso.y = ba.readFloat();
-			_skel.torso.z = ba.readFloat();
-			_skel.l_hip.x = ba.readFloat();
-			_skel.l_hip.y = ba.readFloat();
-			_skel.l_hip.z = ba.readFloat();
-			_skel.l_knee.x = ba.readFloat();
-			_skel.l_knee.y = ba.readFloat();
-			_skel.l_knee.z = ba.readFloat();
-			_skel.l_foot.x = ba.readFloat();
-			_skel.l_foot.y = ba.readFloat();
-			_skel.l_foot.z = ba.readFloat();
-			_skel.r_hip.x = ba.readFloat();
-			_skel.r_hip.y = ba.readFloat();
-			_skel.r_hip.z = ba.readFloat();
-			_skel.r_knee.x = ba.readFloat();
-			_skel.r_knee.y = ba.readFloat();
-			_skel.r_knee.z = ba.readFloat();
-			_skel.r_foot.x = ba.readFloat();
-			_skel.r_foot.y = ba.readFloat();
-			_skel.r_foot.z = ba.readFloat();
-		}
 	}
-	
 }

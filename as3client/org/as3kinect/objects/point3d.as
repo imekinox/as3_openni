@@ -36,5 +36,11 @@ package org.as3kinect.objects {
 			this.y = 0;
 			this.z = 0;
 		}
+		
+		public function updatePoint(_x:Number, _y:Number, _z:Number):void {
+			this.x = _x;
+			this.y = _y;
+			this.z = _z;
+		}
 	}
 }

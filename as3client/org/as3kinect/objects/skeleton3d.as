@@ -27,6 +27,7 @@
 package org.as3kinect.objects {
 	
 	import org.as3kinect.objects.point3d;
+	import flash.utils.ByteArray;
 	
 	public class skeleton3d {
 		public var user_id		:	uint;
@@ -64,6 +65,24 @@ package org.as3kinect.objects {
 			this.r_knee = new  point3d();
 			this.r_foot = new  point3d();
 		}
-
+		
+		public function updateFromBytes(ba:ByteArray){
+			this.user_id = ba.readInt();
+			this.head.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.neck.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_shoulder.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_elbow.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_hand.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_shoulder.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_elbow.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_hand.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.torso.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_hip.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_knee.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.l_foot.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_hip.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_knee.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			this.r_foot.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+		}
 	}
 }
