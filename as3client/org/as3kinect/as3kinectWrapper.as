@@ -1,5 +1,5 @@
 ﻿/*
- * This file is part of the as3server Project. http://www.as3server.org
+ * This file is part of the as3kinect Project. http://www.as3kinect.org
  *
  * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
  * for details.
@@ -59,6 +59,8 @@
 			
 			/* Init data out buffer */
 			_data = new ByteArray();
+			
+			/* Init skeleton and traking count array */
 			_skel = new skeleton3d();
 			_tracked_users = new Array();
 		}
@@ -162,8 +164,8 @@
 		 * 		0 -> Camera command
 		 * 			second byte:
 		 * 				0 -> Get depth ARGB
-		 * 				0 -> Get video ARGB
- 		 * 				0 -> Get skeleton data
+		 * 				1 -> Get video ARGB
+ 		 * 				2 -> Get skeleton data
 		 */
 
 		/*
