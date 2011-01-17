@@ -33,26 +33,19 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "pthreadVC2.lib")
 
+typedef void (*callback)(void);
+
 class as3Network {
   	public:
-		int init();
+		int init(callback cb);
 		void close_connection();
-		void onConnect(void (*eConnect)());
 		int sendData(unsigned char *buffer, int length);
 		int getData(unsigned char *buffer, int length);
 		void sendMessage(const char *msg);
 		void sendMessage(int first, int second, int value);
-		void sendMessage(int first, int second, unsigned char *data, int len);
+		void sendMessage(int first, int second, unsigned char *data, const int len);
+		void wait_client();
 	private:
-		void (*eConnect)();
-		static void *network_data(void *pv);
 		void send_policy_file(int child);
 		int initServer(addrinfo si_type, PCSTR conf_port, SOCKET *the_socket, PCSTR label);
-		struct thread_fun_args
-		{
-			as3Network* This ;
-			void* actual_arg;
-			thread_fun_args(as3Network* t, void* p ) 
-			: This(t), actual_arg(p) {}
-		};
 };

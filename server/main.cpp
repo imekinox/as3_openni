@@ -31,6 +31,7 @@
 #include <pthread\pthread.h>
 
 #include "as3Network.h"
+#include "as3Skeleton.h"
 
 
 //---------------------------------------------------------------------------
@@ -39,6 +40,8 @@
 xn::Context g_Context;
 xn::DepthGenerator g_DepthGenerator;
 xn::UserGenerator g_UserGenerator;
+xn::GestureGenerator g_GestureGenerator;
+xn::HandsGenerator g_HandsGenerator;
 
 XnBool g_bNeedPose = FALSE;
 XnChar g_strPose[20] = "";
@@ -59,9 +62,9 @@ XnBool g_bQuit = false;
 as3Network server;
 unsigned char img_buffer[4*640*480];
 unsigned char img_buffer_meta[4*640*480+6];
-unsigned char skel[4 + 12 * 15];
 
 #define MAX_DEPTH 10000
+#define MAX_USERS 15
 float g_pDepthHist[MAX_DEPTH];
 
 pthread_t server_thread;
@@ -85,22 +88,8 @@ XnFloat Colors[][3] =
 };
 
 XnUInt32 nColors = 10;
+as3Skeleton skeletons[MAX_USERS];
 
-unsigned char *head = new unsigned char[12];
-unsigned char *neck = new unsigned char[12];
-unsigned char *lshoulder = new unsigned char[12];
-unsigned char *lelbow = new unsigned char[12];
-unsigned char *lhand = new unsigned char[12];
-unsigned char *rshoulder = new unsigned char[12];
-unsigned char *relbow = new unsigned char[12];
-unsigned char *rhand = new unsigned char[12];
-unsigned char *torso = new unsigned char[12];
-unsigned char *lhip = new unsigned char[12];
-unsigned char *lknee = new unsigned char[12];
-unsigned char *lfoot = new unsigned char[12];
-unsigned char *rhip = new unsigned char[12];
-unsigned char *rknee = new unsigned char[12];
-unsigned char *rfoot = new unsigned char[12];
 
 //---------------------------------------------------------------------------
 // Code
@@ -235,54 +224,77 @@ void getDepthMap(unsigned char* img_buffer)
 		}
 	}
 
-	XnUserID aUsers[15];
-	XnUInt16 nUsers = 15;
+	XnUserID aUsers[MAX_USERS];
+	XnUInt16 nUsers = MAX_USERS;
 	g_UserGenerator.GetUsers(aUsers, nUsers);
 	for (int i = 0; i < nUsers; ++i)
 	{
 		if (g_bDrawSkeleton && g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
 		{
-			getJointPosition(aUsers[i], XN_SKEL_HEAD, head);
-			getJointPosition(aUsers[i], XN_SKEL_NECK, neck);
+			int index = aUsers[i] - 1;
+			memcpy(skeletons[index].user_id, &aUsers[i], 4);
+			getJointPosition(aUsers[i], XN_SKEL_HEAD, skeletons[index].head);
+			getJointPosition(aUsers[i], XN_SKEL_NECK, skeletons[index].neck);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_SHOULDER, skeletons[index].lshoulder);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_ELBOW, skeletons[index].lelbow);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_HAND, skeletons[index].lhand);
 
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_SHOULDER, lshoulder);
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_ELBOW, lelbow);
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_HAND, lhand);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_SHOULDER, skeletons[index].rshoulder);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_ELBOW, skeletons[index].relbow);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_HAND, skeletons[index].rhand);
 
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_SHOULDER, rshoulder);
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_ELBOW, relbow);
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_HAND, rhand);
+			getJointPosition(aUsers[i], XN_SKEL_TORSO, skeletons[index].torso);
 
-			getJointPosition(aUsers[i], XN_SKEL_TORSO, torso);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_HIP, skeletons[index].lhip);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_KNEE, skeletons[index].lknee);
+			getJointPosition(aUsers[i], XN_SKEL_LEFT_FOOT, skeletons[index].lfoot);
 
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_HIP, lhip);
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_KNEE, lknee);
-			getJointPosition(aUsers[i], XN_SKEL_LEFT_FOOT, lfoot);
-
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_HIP, rhip);
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_KNEE, rknee);
-			getJointPosition(aUsers[i], XN_SKEL_RIGHT_FOOT, rfoot);
-			
-			int user_id = aUsers[i];
-			memcpy(skel, &user_id, 4);
-			memcpy(skel+4+12*0, head, 12);
-			memcpy(skel+4+12*1, neck, 12);
-			memcpy(skel+4+12*2, lshoulder, 12);
-			memcpy(skel+4+12*3, lelbow, 12);
-			memcpy(skel+4+12*4, lhand, 12);
-			memcpy(skel+4+12*5, rshoulder, 12);
-			memcpy(skel+4+12*6, relbow, 12);
-			memcpy(skel+4+12*7, rhand, 12);
-			memcpy(skel+4+12*8, torso, 12);
-			memcpy(skel+4+12*9, lhip, 12);
-			memcpy(skel+4+12*10, lknee, 12);
-			memcpy(skel+4+12*11, lfoot, 12);
-			memcpy(skel+4+12*12, rhip, 12);
-			memcpy(skel+4+12*13, rknee, 12);
-			memcpy(skel+4+12*14, rfoot, 12);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_HIP, skeletons[index].rhip);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_KNEE, skeletons[index].rknee);
+			getJointPosition(aUsers[i], XN_SKEL_RIGHT_FOOT, skeletons[index].rfoot);
 		}
 	}
 }
+
+void addGestures(){
+	g_GestureGenerator.AddGesture("Wave", NULL); 
+	//g_GestureGenerator.AddGesture("Click", NULL); 
+	g_GestureGenerator.AddGesture("RiseHand", NULL); 
+	g_GestureGenerator.AddGesture("Swipe_Right", NULL);
+	g_GestureGenerator.AddGesture("Right", NULL); 
+	//g_GestureGenerator.AddGesture("RaiseHand", NULL); 
+	XnUInt16 nGestures = 10;
+	XnChar *gestures = new XnChar[10];
+	printf("%s\n",gestures);
+	g_GestureGenerator.GetActiveGestures(gestures, nGestures);
+	printf("%s\n",gestures);
+	printf("%d\n",nGestures);
+}
+
+void XN_CALLBACK_TYPE Gesture_Recognized(xn::GestureGenerator &generator, const XnChar *strGesture, const XnPoint3D *pIDPosition, const XnPoint3D *pEndPosition, void *pCookie) {
+		printf("Gesture recognized: %s\n", strGesture); 
+		//removeGestures();
+        //g_GestureGenerator.RemoveGesture(strGesture); 
+        //g_HandsGenerator.StartTracking(*pEndPosition);	
+}
+
+
+void XN_CALLBACK_TYPE Gesture_Progress(xn::GestureGenerator &generator, const XnChar *strGesture, const XnPoint3D *pPosition, XnFloat fProgress, void *pCookie) {
+	//
+}
+
+void XN_CALLBACK_TYPE  Hand_Create(xn::HandsGenerator& generator, XnUserID nId, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie) { 
+  printf("New Hand: %d @ (%f,%f,%f)\n", nId, pPosition->X, pPosition->Y, pPosition->Z); 
+} 
+
+void XN_CALLBACK_TYPE Hand_Update(xn::HandsGenerator& generator, XnUserID nId, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie) { 
+	//
+} 
+
+void XN_CALLBACK_TYPE Hand_Destroy(xn::HandsGenerator& generator, XnUserID nId, XnFloat fTime, void* pCookie) { 
+  printf("Lost Hand: %d\n", nId); 
+  //addGestures();
+} 
 
 // Callback: New user was detected
 void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& generator, XnUserID nId, void* pCookie)
@@ -302,6 +314,7 @@ void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& generator, XnUserID nId, v
 void XN_CALLBACK_TYPE User_LostUser(xn::UserGenerator& generator, XnUserID nId, void* pCookie)
 {
 	server.sendMessage(3,2,nId);
+	skeletons[nId-1].~as3Skeleton();
 }
 // Callback: Detected a pose
 void XN_CALLBACK_TYPE UserPose_PoseDetected(xn::PoseDetectionCapability& capability, const XnChar* strPose, XnUserID nId, void* pCookie)
@@ -322,7 +335,9 @@ void XN_CALLBACK_TYPE UserCalibration_CalibrationEnd(xn::SkeletonCapability& cap
 	{
 		// Calibration succeeded
 		server.sendMessage(3,5,nId);
+		skeletons[nId - 1] = as3Skeleton();
 		g_UserGenerator.GetSkeletonCap().StartTracking(nId);
+
 	}
 	else
 	{
@@ -338,41 +353,64 @@ void XN_CALLBACK_TYPE UserCalibration_CalibrationEnd(xn::SkeletonCapability& cap
 		}
 	}
 }
+	int value;
+
 
 void *server_data(void *arg) {
-	unsigned char buff[1024];
+	int len = 8*10;
+	unsigned char *buff = (unsigned char*)malloc(len); //Command buffer
 	while(_connected){
-		int n = server.getData(buff, 1024);
-		if(n == 6){
-			switch(buff[0]){
-				case 0: //CAMERA
-					switch(buff[1]){
-						case 0: //GET DEPTH
-							server.sendMessage(0,0,img_buffer, sizeof(img_buffer));
-						break;
-						case 1: //GET RGB
-						break;
-						case 2: //GET SKEL
-							server.sendMessage(0,2,skel, sizeof(skel));
-						break;
-					}
-				break;
-				case 1: //MOTOR
-				break;
-				case 2: //MIC
-				break;
+		len = server.getData(buff, 1024);
+		if(len > 0 && len % 6 == 0){
+			//Get the number of commands received
+			int max = len / 6;
+			int i;
+			//For each command received
+			for(i = 0; i < max; i++){
+				switch(buff[0 + (i*6)]){
+					case 0: //CAMERA
+						switch(buff[1 + (i*6)]){
+							case 0: //GET DEPTH
+								server.sendMessage(0,0,img_buffer, sizeof(img_buffer));
+							break;
+							case 1: //GET RGB
+							break;
+							case 2: //GET SKEL
+								XnUserID taUsers[MAX_USERS];
+								XnUInt16 tnUsers = MAX_USERS;
+								g_UserGenerator.GetUsers(taUsers, tnUsers);
+								for (int i = 0; i <= MAX_USERS; i++){
+									if (g_UserGenerator.GetSkeletonCap().IsTracking(taUsers[i])) {
+										server.sendMessage(0, 2, skeletons[i].skel, skeletons[i].size);
+									}
+								}
+							break;
+						}
+					break;
+					case 1: //MOTOR
+					break;
+					case 2: //MIC
+					break;
+				}
 			}
 		}
 		else {
-			printf("got bad command: %d\n", n);
-			server.close_connection();
+			printf("got bad command: %d\n", len);
+			//server.close_connection();
 			_connected = 0;
 		}
+	}
+	if(!_die) {
+		printf("Disconecting client...\n");
+		server.wait_client();
+		//waiting for client led status
+		//freenect_sync_set_led((freenect_led_options) 4, 0);
 	}
 	return NULL;
 }
 
 void server_connected() {
+	printf("asd\n");
 	_connected = 1;
 	if (pthread_create(&server_thread, NULL, &server_data, NULL)) {
 		fprintf(stderr, "Error on pthread_create() for SERVER\n");
@@ -380,7 +418,7 @@ void server_connected() {
 	server.sendMessage("Server connected\n");
 }
 
-#define SAMPLE_XML_PATH "SamplesConfig.xml"
+#define SAMPLE_XML_PATH "as3server_config.xml"
 
 #define CHECK_RC(nRetVal, what)										\
 	if (nRetVal != XN_STATUS_OK)									\
@@ -414,19 +452,27 @@ int main(int argc, char **argv)
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator);
 	CHECK_RC(nRetVal, "Find depth generator");
 
-	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator);
-	if (nRetVal != XN_STATUS_OK)
-	{
-		nRetVal = g_UserGenerator.Create(g_Context);
-		CHECK_RC(nRetVal, "Find user generator");
-	}
+	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_GESTURE, g_GestureGenerator);
+	CHECK_RC(nRetVal, "Find gesture generator");
 
-	XnCallbackHandle hUserCallbacks, hCalibrationCallbacks, hPoseCallbacks;
+	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_HANDS, g_UserGenerator);
+	CHECK_RC(nRetVal, "Find hands generator");
+
+	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator);
+	CHECK_RC(nRetVal, "Find user generator");
+
+	XnCallbackHandle hHandsCallbacks, hGestureCallbacks, hUserCallbacks, hCalibrationCallbacks, hPoseCallbacks;
 	if (!g_UserGenerator.IsCapabilitySupported(XN_CAPABILITY_SKELETON))
 	{
 		printf("Supplied user generator doesn't support skeleton\n");
 		return 1;
 	}
+
+	nRetVal = g_GestureGenerator.Create(g_Context); 
+	nRetVal = g_HandsGenerator.Create(g_Context); 
+	g_GestureGenerator.RegisterGestureCallbacks(Gesture_Recognized, Gesture_Progress, NULL, hGestureCallbacks);
+	g_HandsGenerator.RegisterHandCallbacks(Hand_Create, Hand_Update, Hand_Destroy, NULL, hHandsCallbacks); 
+
 	g_UserGenerator.RegisterUserCallbacks(User_NewUser, User_LostUser, NULL, hUserCallbacks);
 	g_UserGenerator.GetSkeletonCap().RegisterCalibrationCallbacks(UserCalibration_CalibrationStart, UserCalibration_CalibrationEnd, NULL, hCalibrationCallbacks);
 
@@ -447,13 +493,13 @@ int main(int argc, char **argv)
 	nRetVal = g_Context.StartGeneratingAll();
 	CHECK_RC(nRetVal, "StartGenerating");
 
+	addGestures();
+
 	nRetVal = xnFPSInit(&xnFPS, 180);
 	CHECK_RC(nRetVal, "FPS Init");
 
 	server = as3Network();
-	server.init();
-	server.onConnect(&server_connected);
-
+	server.init(server_connected);
 
 	while(!_die){
 		xnFPSMarkFrame(&xnFPS);

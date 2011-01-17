@@ -41,11 +41,10 @@ int die = 0;
 int data_child;
 int psent = 0;
 
-// callback handler
-void as3Network::onConnect(void (*eConnectHandler)())
-{
-  this->eConnect = eConnectHandler;
-}
+#define MAX_PACKET_SIZE 640*480*4
+
+unsigned char *msg = new unsigned char[MAX_PACKET_SIZE];
+callback net_callback;
 
 /* 
  * sendMessage (Debug message)
@@ -59,13 +58,11 @@ void as3Network::sendMessage(const char *data) {
 	int first = 3;
 	int second = 0;
 	int m_len = 1 + 1 + sizeof(int);
-	unsigned char *msg = new unsigned char[len + m_len];
 	memcpy(msg, &first, 1);
 	memcpy(msg + 1, &second, 1);
 	memcpy(msg + 2, &len, sizeof(int));
 	memcpy(msg + m_len, data, len);
 	sendData(msg,len+m_len);
-	delete [] msg;
 }
 
 /* 
@@ -93,13 +90,11 @@ void as3Network::sendMessage(int first, int second, int value) {
  */
 void as3Network::sendMessage(int first, int second, unsigned char *data, int len) {
 	int m_len = 1 + 1 + sizeof(int);
-	unsigned char *msg = new unsigned char[m_len + len];
 	memcpy(msg, &first, 1);
 	memcpy(msg + 1, &second, 1);
 	memcpy(msg + 2, &len, sizeof(int));
 	memcpy(msg + m_len, data, len);
 	sendData(msg,m_len + len);
-	delete [] msg;
 }
 
 /* 
@@ -136,45 +131,27 @@ void as3Network::send_policy_file(int child){
 	}
 }
 
-void *as3Network::network_data(void *pv) {
-	thread_fun_args* tf_args = static_cast<thread_fun_args*>(pv) ;
-    as3Network* This = tf_args->This ;
-    void* args = tf_args->actual_arg ;
-
-	while ( !die )
-	{
-		printf("### Wait data client\n");
-		data_client_socket = accept(data_socket, NULL, NULL);
-		if (data_client_socket == INVALID_SOCKET) {
-			printf("Error on accept() for data, exit data thread. %d\n", WSAGetLastError());
-			closesocket(data_socket);
-			WSACleanup();
-			break;
-		}
-		
-		printf("### Got data client\n");
-		//This->send_policy_file(depth_child);
-	  	if(This->eConnect)
-	  	{
-	    	This->eConnect();
-	  	}
+void as3Network::wait_client() {
+	printf("### Wait data client\n");
+	data_client_socket = accept(data_socket, NULL, NULL);
+	if (data_client_socket == INVALID_SOCKET && !die) {
+		printf("Error on accept() for data, exit data thread. %d\n", WSAGetLastError());
+		closesocket(data_socket);
+		WSACleanup();
 	}
-	
-	delete tf_args ;
-	return NULL;
+
+	printf("### Got data client\n");
+	//This->send_policy_file(depth_child);
+	net_callback();
 }
 
-int as3Network::init() {
+int as3Network::init(callback cb) {
+	net_callback = cb;
 	die = 0;
 	initServer(si_data, conf_port_data, &data_socket, "DATA");
 
-	if (pthread_create(&data_thread, NULL, &as3Network::network_data, new thread_fun_args(this,0)))
-	{
-		fprintf(stderr, "Error on pthread_create() for DATA\n");
-		return -1;
-	}
+	wait_client();
 	return 0;
-	
 }
 
 int as3Network::initServer(addrinfo si_type, PCSTR conf_port, SOCKET *the_socket, PCSTR label){
@@ -227,6 +204,7 @@ int as3Network::initServer(addrinfo si_type, PCSTR conf_port, SOCKET *the_socket
 
 void as3Network::close_connection() {
 	die = 1;
+	delete [] msg;
 	if ( data_socket != INVALID_SOCKET )
 		closesocket(data_socket);
 }

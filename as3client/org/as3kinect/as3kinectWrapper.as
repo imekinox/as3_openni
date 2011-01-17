@@ -1,7 +1,7 @@
 ﻿/*
  * This file is part of the as3kinect Project. http://www.as3kinect.org
  *
- * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
+ * Copyright (c) 2010 individual as3kinect contributors. See the CONTRIB file
  * for details.
  *
  * This code is licensed to you under the terms of the Apache License, version
@@ -28,7 +28,8 @@
 	
 	import org.as3kinect.as3kinect;
 	import org.as3kinect.as3kinectSocket;
-	import org.as3kinect.objects.skeleton3d;
+	import org.as3kinect.as3kinectDepth;
+	import org.as3kinect.as3kinectSkeleton;
 	import org.as3kinect.events.as3kinectSocketEvent;
 	import org.as3kinect.events.as3kinectWrapperEvent;
 	
@@ -43,15 +44,16 @@
 
 		private var _socket:as3kinectSocket;
 		private var _data:ByteArray;
-		private var _depth_buff_busy:Boolean = false;
-		private var _skel_buff_busy:Boolean = false;
 		private var _console:TextField;
 		private var _debugging:Boolean = false;
 		private var user_id:Number;
-		private var _skel:Object;
-		private var _tracked_users:Array;
+		
+		public var depth:as3kinectDepth;
+		public var skel:as3kinectSkeleton;
 
 		public function as3kinectWrapper() {
+			depth = new as3kinectDepth();			
+			skel = new as3kinectSkeleton();
 			/* Init socket objects */
 			_socket = as3kinectSocket.instance;
 			_socket.connect(as3kinect.SERVER_IP, as3kinect.SOCKET_PORT);
@@ -59,19 +61,6 @@
 			
 			/* Init data out buffer */
 			_data = new ByteArray();
-			
-			/* Init skeleton and traking count array */
-			_skel = new skeleton3d();
-			_tracked_users = new Array();
-		}
-		
-		/*
-		 * Draw ARGB from ByteArray to BitmapData object
-		 */
-		public function byteArrayToBitmapData(bytes:ByteArray, _canvas:BitmapData):void{
-			_canvas.lock();
-			_canvas.setPixels(new Rectangle(0,0, as3kinect.IMG_WIDTH, as3kinect.IMG_HEIGHT), bytes);
-			_canvas.unlock();
 		}
 
 		/*
@@ -104,15 +93,15 @@
 					switch (event.data.second) {
 						case 0: //Depth received
 							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_DEPTH, event.data.buffer));
-							_depth_buff_busy = false;
+							depth.busy = false;
 						break;
 						case 1: //Video received
 							//dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_DEPTH, event.data));
 						break;
 						case 2: //SKEL received
-							_skel.updateFromBytes(event.data.buffer);
-							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_SKEL, _skel));
-							_skel_buff_busy = false;
+							skel.processSkeleton(event.data.buffer);
+							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_SKEL, skel.skeletons));
+							skel.busy = false;
 						break;
 					}
 				break;
@@ -132,7 +121,7 @@
 						case 2: //Lost user
 							user_id = event.data.buffer.readInt();
 							if(_debugging) _console.appendText("Lost user: " + user_id + "\n");
-							_tracked_users.pop();
+							skel.tracked_users.pop();
 						break;
 						case 3: //Pose detected
 							user_id = event.data.buffer.readInt();
@@ -145,7 +134,7 @@
 						case 5: //Calibration complete
 							user_id = event.data.buffer.readInt();
 							if(_debugging) _console.appendText("Calibration complete for user: " + user_id + "\n");
-							_tracked_users.push(user_id);
+							skel.tracked_users.push(user_id);
 						break;
 						case 6: //Calibration failed
 							user_id = event.data.buffer.readInt();
@@ -156,50 +145,6 @@
 			}
 			// Clear ByteArray after used
 			event.data.buffer.clear();
-		}
-		
-		/*
-		 *	Client -> Server communication protocol:
-		 *	first byte:
-		 * 		0 -> Camera command
-		 * 			second byte:
-		 * 				0 -> Get depth ARGB
-		 * 				1 -> Get video ARGB
- 		 * 				2 -> Get skeleton data
-		 */
-
-		/*
-		 * Tell server to send the latest depth frame
-		 * Note: We should lock the command while we are waiting for the data to avoid lag
-		 */
-		public function getDepthBuffer():void {
-			if(!_depth_buff_busy){
-				_depth_buff_busy = true;
-				_data.clear();
-				_data.writeByte(as3kinect.CAMERA_ID);
-				_data.writeByte(as3kinect.GET_DEPTH);
-				_data.writeInt(0);
-				if(_socket.sendCommand(_data) != as3kinect.SUCCESS){
-					throw new Error('Data was not complete');
-				}
-			}
-		}
-		
-		/*
-		 * Tell server to send the latest skeleton data
-		 * Note: We should lock the command while we are waiting for the data to avoid lag
-		 */
-		public function getSkeleton():void {
-			if(!_skel_buff_busy && _tracked_users.length > 0){
-				_skel_buff_busy = true;
-				_data.clear();
-				_data.writeByte(as3kinect.CAMERA_ID);
-				_data.writeByte(as3kinect.GET_SKEL);
-				_data.writeInt(0);
-				if(_socket.sendCommand(_data) != as3kinect.SUCCESS){
-					throw new Error('Data was not complete');
-				}
-			}
 		}
 		
 		/*

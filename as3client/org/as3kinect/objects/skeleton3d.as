@@ -1,7 +1,7 @@
 ﻿/*
  * This file is part of the as3kinect Project. http://www.as3kinect.org
  *
- * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
+ * Copyright (c) 2010 individual as3kinect contributors. See the CONTRIB file
  * for details.
  *
  * This code is licensed to you under the terms of the Apache License, version
@@ -23,6 +23,7 @@
  * Binary distributions must follow the binary distribution requirements of
  * either License.
  */
+
  
 package org.as3kinect.objects {
 	

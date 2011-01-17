@@ -1,7 +1,7 @@
-﻿/*
+/*
  * This file is part of the as3kinect Project. http://www.as3kinect.org
  *
- * Copyright (c) 2010 individual as3kinect contributors. See the CONTRIB file
+ * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
  * for details.
  *
  * This code is licensed to you under the terms of the Apache License, version
@@ -24,32 +24,31 @@
  * either License.
  */
 
+#include "as3Skeleton.h"
+#include <iostream>
+using namespace std;
 
- package org.as3kinect {
-	 
- 	import flash.utils.ByteArray;
-	
-	public class as3kinect {
+as3Skeleton::as3Skeleton() {
+	this->size = 4 + 12 * 15;
+	this->skel = new unsigned char[this->size];
+	this->user_id = this->skel;
+	this->head = this->skel+4+12*0;
+	this->neck = this->skel+4+12*1;
+	this->lshoulder =this->skel+4+12*2;
+	this->lelbow =this->skel+4+12*3;
+	this->lhand =this->skel+4+12*4;
+	this->rshoulder =this->skel+4+12*5;
+	this->relbow =this->skel+4+12*6;
+	this->rhand =this->skel+4+12*7;
+	this->torso =this->skel+4+12*8;
+	this->lhip =this->skel+4+12*9;
+	this->lknee =this->skel+4+12*10;
+	this->lfoot =this->skel+4+12*11;
+	this->rhip =this->skel+4+12*12;
+	this->rknee =this->skel+4+12*13;
+	this->rfoot =this->skel+4+12*14;
+}
 
-		public static const SUCCESS:int = 0;
-		public static const ERROR:int = -1;
-
-		public static const SERVER_IP:String = "localhost";
-		public static const SOCKET_PORT:int = 6001;
-
-		public static const CAMERA_ID:int = 0;
-		public static const MOTOR_ID:int = 1;
-		public static const MIC_ID:int = 2;
-		
-		public static const GET_DEPTH:int = 0;
-		public static const GET_RGB:int = 1;
-		public static const GET_SKEL:int = 2;
-		
-		public static const IMG_WIDTH:int = 640;
-		public static const IMG_HEIGHT:int = 480;
-
-		public static const RAW_IMG_SIZE:int = IMG_WIDTH * IMG_HEIGHT * 4;
-		public static const DATA_IN_SIZE:int = 3 * 2 + 3 * 8;
-		public static const COMMAND_SIZE:int = 6;
-	}
+as3Skeleton::~as3Skeleton() {
+	delete [] skel;
 }

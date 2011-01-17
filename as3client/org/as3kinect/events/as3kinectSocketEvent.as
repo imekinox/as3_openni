@@ -1,5 +1,5 @@
 ﻿/*
- * This file is part of the as3kinect Project. http://www.as3kinect.org
+ * This file is part of the as3server Project. http://www.as3server.org
  *
  * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
  * for details.
