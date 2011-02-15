@@ -3,3 +3,4 @@ server/ipch
 *.sdf
 server/openni/*
 server/deps/*
+/mono-server/KinectOpenNIMono/KinectOpenNIMono/bin
