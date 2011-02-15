@@ -22,6 +22,7 @@ namespace KinectOpenNIMono
 		{
 			MainClass main = new MainClass ();
 			main.SetupKinect ();
+			main.SetupServer ();
 		}
 		
 		private void SetupKinect ()
@@ -119,21 +120,24 @@ namespace KinectOpenNIMono
 			StateObject state = (StateObject)ar.AsyncState;
 			Socket handler = state.workSocket;
 			
-			// Read data from the client socket. 
+			// Read data from the client socket.
+			
 			int bytesRead = handler.EndReceive (ar);
 			
 			if (bytesRead > 0) {
 				// There  might be more data, so store the data received so far.
 				BinaryWriter bWriter = new BinaryWriter (state.mStream);
-				bWriter.Write (bytesRead);
+				bWriter.Write (state.buffer);
+				
 				byteContent = state.mStream.ToArray ();
+				//byteContent = state.mStream.ToArray ();
 				
 				//Check to see if its as long as the as3kinect buffer is (6).
 				// if not, read more data.
 				if (byteContent.Length == 6) {
 					// All the data has been read
 					//Send (handler, byteContent);
-					Console.WriteLine ("Read in message from client!!! " + byteContent.ToString ());
+					Console.WriteLine ("Read in message from client!!! " + byteContent[2].ToString ());
 				} else {
 					// Not all data received. Get more.
 					handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
