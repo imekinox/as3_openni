@@ -26,19 +26,20 @@
 
  package org.as3kinect {
 	
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.events.EventDispatcher;
+	import flash.geom.Rectangle;
+	import flash.text.TextField;
+	import flash.utils.ByteArray;
+	
 	import org.as3kinect.as3kinect;
-	import org.as3kinect.as3kinectSocket;
 	import org.as3kinect.as3kinectDepth;
+	import org.as3kinect.as3kinectHand;
 	import org.as3kinect.as3kinectSkeleton;
+	import org.as3kinect.as3kinectSocket;
 	import org.as3kinect.events.as3kinectSocketEvent;
 	import org.as3kinect.events.as3kinectWrapperEvent;
-	
-	import flash.utils.ByteArray;
-	import flash.display.BitmapData;
-	import flash.display.Bitmap;
-	import flash.geom.Rectangle;
-	import flash.events.EventDispatcher;
-	import flash.text.TextField;
 	
 	public class as3kinectWrapper extends EventDispatcher {
 
@@ -50,10 +51,13 @@
 		
 		public var depth:as3kinectDepth;
 		public var skel:as3kinectSkeleton;
-
+		public var hand:as3kinectHand;
+		
 		public function as3kinectWrapper() {
 			depth = new as3kinectDepth();			
 			skel = new as3kinectSkeleton();
+			hand = new as3kinectHand();
+			
 			/* Init socket objects */
 			_socket = as3kinectSocket.instance;
 			_socket.connect(as3kinect.SERVER_IP, as3kinect.SOCKET_PORT);
@@ -102,6 +106,11 @@
 							skel.processSkeleton(event.data.buffer);
 							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_SKEL, skel.skeletons));
 							skel.busy = false;
+						break;
+						case 3: //HAND received
+							hand.processHands(event.data.buffer);
+							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_HAND, hand.hands));
+							//Hand stuff here.
 						break;
 					}
 				break;
