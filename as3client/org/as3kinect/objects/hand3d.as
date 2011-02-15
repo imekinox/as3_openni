@@ -28,25 +28,25 @@ package org.as3kinect.objects
 {
 	import flash.utils.ByteArray;
 	
-	import org.as3kinect.objects.point3d;
+import org.as3kinect.objects.point3d;
 	
 	public class hand3d
 	{
 		public var hand_id:int;
 		public var isPrimary:Boolean;
-		public var position:point3d;
+		public var pos:point3d;
 		
 		public function hand3d()
 		{
 			hand_id = 0;
 			isPrimary = false;
-			position = new point3d();
+			pos = new point3d();
 		}
 		
-		public function updateFromBytes(ba:ByteArray){
+		public function updateFromBytes(ba:ByteArray):void{
 			hand_id = ba.readInt();
 			isPrimary = ba.readBoolean();
-			position = position.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
+			pos.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
 		}
 	}
 }
