@@ -66,7 +66,7 @@
 			_socket.addEventListener(Event.CONNECT, onSocketConnect);
 		}
 		
-		public function connect(host:String = 'localhost', port:uint = 6001):void
+		public function connect(host:String = '127.0.0.1', port:uint = 6001):void
 		{
 			_port = port;
 			_packet_size = 0;

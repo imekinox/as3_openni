@@ -75,6 +75,8 @@ package org.as3kinect
 				bArray.position = 0;
 				_tmp_hand.updateFromBytes(bArray);
 				_hand_array[_tmp_hand.hand_id - 1] = _tmp_hand;
+			}else{
+				_hand_array = [];
 			}
 			
 			
