@@ -110,6 +110,7 @@
 						case 3: //HAND received
 							hand.processHands(event.data.buffer);
 							dispatchEvent(new as3kinectWrapperEvent(as3kinectWrapperEvent.ON_HAND, hand.hands));
+							hand.busy = false;
 							//Hand stuff here.
 						break;
 					}

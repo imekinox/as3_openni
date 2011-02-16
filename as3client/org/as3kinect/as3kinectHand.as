@@ -71,8 +71,13 @@ package org.as3kinect
 		}
 		
 		public function processHands(bArray:ByteArray):void {
-			_tmp_hand.updateFromBytes(bArray);
-			_hand_array[_tmp_hand.hand_id - 1] = _tmp_hand;
+			if(bArray.readUnsignedInt() != 0){
+				bArray.position = 0;
+				_tmp_hand.updateFromBytes(bArray);
+				_hand_array[_tmp_hand.hand_id - 1] = _tmp_hand;
+			}
+			
+			
 		}
 		
 		public function get hands():Array {

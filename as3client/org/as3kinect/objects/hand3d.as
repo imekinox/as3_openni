@@ -28,11 +28,12 @@ package org.as3kinect.objects
 {
 	import flash.utils.ByteArray;
 	
-import org.as3kinect.objects.point3d;
+	import org.as3kinect.objects.point3d;
 	
 	public class hand3d
 	{
-		public var hand_id:int;
+		public var hand_id:uint;
+		public var user_id:uint;
 		public var isPrimary:Boolean;
 		public var pos:point3d;
 		
@@ -44,7 +45,8 @@ import org.as3kinect.objects.point3d;
 		}
 		
 		public function updateFromBytes(ba:ByteArray):void{
-			hand_id = ba.readInt();
+			hand_id = ba.readUnsignedInt();
+			user_id = ba.readUnsignedInt();
 			isPrimary = ba.readBoolean();
 			pos.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
 		}
