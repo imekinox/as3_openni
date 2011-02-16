@@ -4,8 +4,11 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
+
 namespace KinectOpenNIMono
 {
+	
 	class MainClass
 	{
 		private readonly string SAMPLE_XML_FILE = @"../../Sample-Tracking.xml";
@@ -17,6 +20,9 @@ namespace KinectOpenNIMono
 		private bool shouldRun;
 		private xnv.SessionManager sessionManager;
 		private xnv.PointControl pointControl;
+		private xnv.HandPointContext primaryHand;
+		
+		private List<xnv.HandPointContext> handPoints;
 		
 		public static void Main (string[] args)
 		{
@@ -24,7 +30,7 @@ namespace KinectOpenNIMono
 			main.SetupKinect ();
 			main.SetupServer ();
 		}
-		
+
 		private void SetupKinect ()
 		{
 			this.context = new xn.Context (SAMPLE_XML_FILE);
@@ -34,7 +40,16 @@ namespace KinectOpenNIMono
 			
 			this.sessionManager.SessionStart += new xnv.SessionManager.SessionStartHandler (sessionManager_SessionStart);
 			
+			this.primaryHand = new xnv.HandPointContext ();
+			this.handPoints = new List<xnv.HandPointContext> ();
+			
+			this.pointControl.PointDestroy += new xnv.PointControl.PointDestroyHandler (pointControl_PointDestroy);
 			this.pointControl.PointUpdate += new xnv.PointControl.PointUpdateHandler (pointControl_PointUpdate);
+			this.pointControl.PointCreate += new xnv.PointControl.PointCreateHandler (pointControl_PointCreate);
+			
+			this.pointControl.PrimaryPointCreate += new xnv.PointControl.PrimaryPointCreateHandler (pointControl_PrimaryPointCreate);
+			this.pointControl.PrimaryPointReplace += new xnv.PointControl.PrimaryPointReplaceHandler (pointControl_PrimaryPointReplace);
+			this.pointControl.PrimaryPointDestroy += new xnv.PointControl.PrimaryPointDestroyHandler (pointControl_PrimaryPointDestroy);
 			
 			this.sessionManager.AddListener (this.pointControl);
 			
@@ -42,7 +57,7 @@ namespace KinectOpenNIMono
 			this.readerThread = new Thread (ReaderThread);
 			this.readerThread.Start ();
 		}
-		
+
 		private void ReaderThread ()
 		{
 			while (this.shouldRun) {
@@ -50,29 +65,120 @@ namespace KinectOpenNIMono
 					this.context.WaitAndUpdateAll ();
 					this.sessionManager.Update (this.context);
 				} catch (System.Exception) {
+					
+				}
+			}
+		}
+
+		void sessionManager_SessionStart (ref xn.Point3D position)
+		{
+			
+		}
+		
+		void pointControl_PointCreate (ref xnv.HandPointContext context)
+		{
+			handPoints.Add (context);
+			
+		}
+		
+		void pointControl_PointUpdate (ref xnv.HandPointContext context)
+		{
+			string sendData = 
+					"Pos(" + context.ptPosition.X.ToString () + ", " 
+						+ context.ptPosition.Y.ToString () + ", " 
+						+ context.ptPosition.Z.ToString () + ") "
+						+ "nID: " + context.nID.ToString () 
+						+ " nUserID: " + context.nUserID.ToString ();
 				
+				
+				Console.Out.WriteLine ("PointUpdate: " + sendData);
+		}
+		
+		void pointControl_PointDestroy (uint id)
+		{
+			foreach (xnv.HandPointContext hpc in handPoints)
+			{
+				if (hpc.nID == id) {
+					handPoints.Remove (hpc);
 				}
 			}
 		}
 		
-		void sessionManager_SessionStart (ref xn.Point3D position)
+		void pointControl_PrimaryPointCreate (ref xnv.HandPointContext context, ref xn.Point3D pnt)
 		{
-				
+			primaryHand = context;
 		}
 
-		void pointControl_PointUpdate (ref xnv.HandPointContext context)
+		void pointControl_PrimaryPointReplace (uint nID, ref xnv.HandPointContext context)
 		{
-			if (!context.Equals (null)) {
-				
-				string sendData = context.ptPosition.X.ToString () + "|" + context.ptPosition.Y.ToString () + "|" + context.ptPosition.Z.ToString ();
-				
-				
-				Console.Out.WriteLine ("PointUpdate: " + sendData);
-			}
+			primaryHand = context;
+		}
+
+		void pointControl_PrimaryPointDestroy (uint id)
+		{
+			primaryHand = new xnv.HandPointContext ();
+		}
+
 		
+		void processClientRequest (byte[] data, Socket clientSocket)
+		{
+			//byte cameraID = data[0];
+			byte requestNum = data[1];
+			
+			switch (requestNum) {
+			case 0:
+				//get depth buffer
+				break;
+			case 1:
+				//get rgb buffer
+				break;
+			case 2:
+				//get skeleton
+				break;
+			case 3:
+				//get hands
+				uint numSent = 0;
+				
+				foreach (xnv.HandPointContext hpc in handPoints)
+				{
+					MemoryStream ms = new MemoryStream ();
+					BinaryWriter bw = new BinaryWriter (ms);
+					bw.Write ((byte)0);
+					bw.Write ((byte)3);
+					bw.Write (hpc.nID);
+					bw.Write (hpc.nUserID);
+					bw.Write (hpc.Equals (primaryHand));
+					bw.Write (hpc.ptPosition.X);
+					bw.Write (hpc.ptPosition.Y);
+					bw.Write (hpc.ptPosition.Z);
+					
+					Send (clientSocket, ms.ToArray ());
+					numSent++;
+				}
+				
+				if (numSent == 0) {
+					
+					byte[] ba = new byte[6];
+					
+					//camera data
+					ba[0] = 0;
+					//hand response
+					ba[1] = 3;
+					//first int, tell it nID = 0
+					ba[2] = 0;
+					ba[3] = 0;
+					ba[4] = 0; 
+					ba[5] = 0;
+					
+					Send (clientSocket, ba);
+				}
+				break;
+			default:
+				break;
+			}
 			
 		}
-		
+
 		#region Async Server Code
 		private void SetupServer ()
 		{
@@ -111,7 +217,7 @@ namespace KinectOpenNIMono
 			handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
 		}
 
-		public static void ReadCallback (IAsyncResult ar)
+		public void ReadCallback (IAsyncResult ar)
 		{
 			byte[] byteContent;
 			
@@ -137,7 +243,8 @@ namespace KinectOpenNIMono
 				if (byteContent.Length == 6) {
 					// All the data has been read
 					//Send (handler, byteContent);
-					Console.WriteLine ("Read in message from client!!! " + byteContent[2].ToString ());
+					processClientRequest (byteContent, handler);
+					Console.WriteLine ("Read in message from client!!! " + byteContent[1].ToString ());
 				} else {
 					// Not all data received. Get more.
 					handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
@@ -145,12 +252,12 @@ namespace KinectOpenNIMono
 			}
 		}
 
-		private static void Send (Socket handler, byte[] data)
+		private void Send (Socket handler, byte[] data)
 		{
 			handler.BeginSend (data, 0, data.Length, 0, new AsyncCallback (SendCallback), handler);
 		}
 
-		private static void SendCallback (IAsyncResult ar)
+		private void SendCallback (IAsyncResult ar)
 		{
 			try {
 				// Retrieve the socket from the state object.
@@ -178,7 +285,7 @@ namespace KinectOpenNIMono
 			// Receive buffer.
 			public byte[] buffer = new byte[BufferSize];
 			// Received data string.
-			public MemoryStream mStream = new MemoryStream();
+			public MemoryStream mStream = new MemoryStream ();
 			//public StringBuilder sb = new StringBuilder ();
 		}
 		#endregion
