@@ -34,7 +34,7 @@
 		public static const SUCCESS:int = 0;
 		public static const ERROR:int = -1;
 
-		public static const SERVER_IP:String = "localhost";
+		public static const SERVER_IP:String = "127.0.0.1";
 		public static const SOCKET_PORT:int = 6001;
 
 		public static const CAMERA_ID:int = 0;
