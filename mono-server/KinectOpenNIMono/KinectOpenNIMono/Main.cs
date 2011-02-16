@@ -13,8 +13,6 @@ namespace KinectOpenNIMono
 	{
 		private readonly string SAMPLE_XML_FILE = @"../../Sample-Tracking.xml";
 
-		public static ManualResetEvent allDone = new ManualResetEvent (false);
-
 		private xn.Context context;
 		private Thread readerThread;
 		private bool shouldRun;
@@ -23,6 +21,9 @@ namespace KinectOpenNIMono
 		private xnv.HandPointContext primaryHand;
 		
 		private List<xnv.HandPointContext> handPoints;
+		
+		private TcpListener tcpListener;
+		private Thread listenThread;
 		
 		public static void Main (string[] args)
 		{
@@ -120,10 +121,11 @@ namespace KinectOpenNIMono
 		}
 
 		
-		void processClientRequest (byte[] data, Socket clientSocket)
+		List<byte[]> processClientRequest (byte[] data)
 		{
 			//byte cameraID = data[0];
 			byte requestNum = data[1];
+			List<byte[]> responseBuffers = new List<byte[]> ();
 			
 			switch (requestNum) {
 			case 0:
@@ -137,8 +139,6 @@ namespace KinectOpenNIMono
 				break;
 			case 3:
 				//get hands
-				uint numSent = 0;
-				
 				foreach (xnv.HandPointContext hpc in handPoints)
 				{
 					MemoryStream ms = new MemoryStream ();
@@ -152,11 +152,10 @@ namespace KinectOpenNIMono
 					bw.Write (hpc.ptPosition.Y);
 					bw.Write (hpc.ptPosition.Z);
 					
-					Send (clientSocket, ms.ToArray ());
-					numSent++;
+					responseBuffers.Add (ms.ToArray ());
 				}
 				
-				if (numSent == 0) {
+				if (responseBuffers.ToArray ().Length == 0) {
 					
 					byte[] ba = new byte[6];
 					
@@ -167,127 +166,80 @@ namespace KinectOpenNIMono
 					//first int, tell it nID = 0
 					ba[2] = 0;
 					ba[3] = 0;
-					ba[4] = 0; 
+					ba[4] = 0;
 					ba[5] = 0;
 					
-					Send (clientSocket, ba);
+					responseBuffers.Add (ba);
 				}
 				break;
 			default:
 				break;
 			}
-			
+			return responseBuffers;
 		}
 
 		#region Async Server Code
-		private void SetupServer ()
+		void SetupServer ()
 		{
-			IPAddress ipAddr = IPAddress.Parse ("127.0.0.1");
-			IPEndPoint localEP = new IPEndPoint (ipAddr, 6001);
-			
-			Socket listener = new Socket (localEP.Address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-			
-			try {
-				listener.Bind (localEP);
-				listener.Listen (10);
+			this.tcpListener = new TcpListener (IPAddress.Parse ("127.0.0.1"), 6001);
+			this.listenThread = new Thread (new ThreadStart (ListenForClients));
+			this.listenThread.Start ();
+		}
+		
+		private void ListenForClients ()
+		{
+			this.tcpListener.Start ();
+			Console.WriteLine ("Waiting for client to connect...");
+			while (true) {
+				//blocks until a client has connected to the server
 				
-				while (true) {
-					allDone.Reset ();
-					
-					Console.WriteLine ("Waiting for a connection...");
-					listener.BeginAccept (new AsyncCallback (acceptCallback), listener);
-					
-					allDone.WaitOne ();
+				TcpClient client = this.tcpListener.AcceptTcpClient ();
+				Console.WriteLine ("Client has connected!");
+				//create a thread to handle communication 
+				//with connected client
+				Thread clientThread = new Thread (new ParameterizedThreadStart (HandleClientComm));
+				clientThread.Start (client);
+			}
+		}
+		
+		private void HandleClientComm (object client)
+		{
+			TcpClient tcpClient = (TcpClient)client;
+			NetworkStream clientStream = tcpClient.GetStream ();
+			
+			byte[] message = new byte[6];
+			int bytesRead;
+			
+			while (true) {
+				bytesRead = 0;
+				
+				try {
+					//blocks until a client sends a message
+					bytesRead = clientStream.Read (message, 0, 6);
+					Console.WriteLine ("Message recieved from client!");
+				} catch {
+					Console.WriteLine ("Socket Error!");
+					break;
 				}
-			} catch (Exception e) {
-				Console.WriteLine (e.ToString ());
-			}
-			Console.WriteLine ("Closing the listener...");
-		}
-
-		public void acceptCallback (IAsyncResult ar)
-		{
-			allDone.Set ();
-			
-			Socket listener = (Socket)ar.AsyncState;
-			Socket handler = listener.EndAccept (ar);
-			
-			StateObject state = new StateObject ();
-			state.workSocket = handler;
-			handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
-		}
-
-		public void ReadCallback (IAsyncResult ar)
-		{
-			byte[] byteContent;
-			
-			// Retrieve the state object and the handler socket
-			// from the asynchronous state object.
-			StateObject state = (StateObject)ar.AsyncState;
-			Socket handler = state.workSocket;
-			
-			// Read data from the client socket.
-			
-			int bytesRead = handler.EndReceive (ar);
-			
-			if (bytesRead > 0) {
-				// There  might be more data, so store the data received so far.
-				BinaryWriter bWriter = new BinaryWriter (state.mStream);
-				bWriter.Write (state.buffer);
 				
-				byteContent = state.mStream.ToArray ();
-				//byteContent = state.mStream.ToArray ();
-				
-				//Check to see if its as long as the as3kinect buffer is (6).
-				// if not, read more data.
-				if (byteContent.Length == 6) {
-					// All the data has been read
-					//Send (handler, byteContent);
-					processClientRequest (byteContent, handler);
-					Console.WriteLine ("Read in message from client!!! " + byteContent[1].ToString ());
-				} else {
-					// Not all data received. Get more.
-					handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
+				if (bytesRead == 0) {
+					//the client has disconnected from the server
+					Console.WriteLine ("Client has disconnected.");
+					break;
 				}
+				
+				List<byte[]> buffersToSend = processClientRequest (message);
+				foreach (byte[] response in buffersToSend) {
+					clientStream.Write (response, 0, response.Length);
+					clientStream.Flush ();
+					Console.WriteLine ("Sent message to client!");
+				}
+				
 			}
+			
+			tcpClient.Close ();
 		}
-
-		private void Send (Socket handler, byte[] data)
-		{
-			handler.BeginSend (data, 0, data.Length, 0, new AsyncCallback (SendCallback), handler);
-		}
-
-		private void SendCallback (IAsyncResult ar)
-		{
-			try {
-				// Retrieve the socket from the state object.
-				Socket handler = (Socket)ar.AsyncState;
-				
-				// Complete sending the data to the remote device.
-				int bytesSent = handler.EndSend (ar);
-				Console.WriteLine ("Sent {0} bytes to client.", bytesSent);
-				
-				handler.Shutdown (SocketShutdown.Both);
-				handler.Close ();
-				
-			} catch (Exception e) {
-				Console.WriteLine (e.ToString ());
-			}
-		}
-
-		// State object for reading client data asynchronously
-		public class StateObject
-		{
-			// Client  socket.
-			public Socket workSocket = null;
-			// Size of receive buffer.
-			public const int BufferSize = 6;
-			// Receive buffer.
-			public byte[] buffer = new byte[BufferSize];
-			// Received data string.
-			public MemoryStream mStream = new MemoryStream ();
-			//public StringBuilder sb = new StringBuilder ();
-		}
+		
 		#endregion
 		
 		
