@@ -11,7 +11,7 @@ namespace KinectOpenNIMono
 	
 	class MainClass
 	{
-		private readonly string SAMPLE_XML_FILE = @"../../Sample-Tracking.xml";
+		private readonly string SAMPLE_XML_FILE = @"Sample-Tracking.xml";
 
 		private xn.Context context;
 		private Thread readerThread;
@@ -84,7 +84,13 @@ namespace KinectOpenNIMono
 		
 		void pointControl_PointUpdate (ref xnv.HandPointContext context)
 		{
-			string sendData = 
+			foreach (xnv.HandPointContext hpc in handPoints) {
+				if (hpc.nID == context.nID) {
+					handPoints[handPoints.IndexOf(hpc)] = context;
+				}
+			}
+			
+			/*string sendData = 
 					"Pos(" + context.ptPosition.X.ToString () + ", " 
 						+ context.ptPosition.Y.ToString () + ", " 
 						+ context.ptPosition.Z.ToString () + ") "
@@ -92,7 +98,8 @@ namespace KinectOpenNIMono
 						+ " nUserID: " + context.nUserID.ToString ();
 				
 				
-				Console.Out.WriteLine ("PointUpdate: " + sendData);
+				Console.Out.WriteLine ("PointUpdate: " + sendData);*/
+			
 		}
 		
 		void pointControl_PointDestroy (uint id)
@@ -143,8 +150,7 @@ namespace KinectOpenNIMono
 				{
 					MemoryStream ms = new MemoryStream ();
 					BinaryWriter bw = new BinaryWriter (ms);
-					bw.Write ((byte)0);
-					bw.Write ((byte)3);
+					
 					bw.Write (hpc.nID);
 					bw.Write (hpc.nUserID);
 					bw.Write (hpc.Equals (primaryHand));
@@ -152,22 +158,40 @@ namespace KinectOpenNIMono
 					bw.Write (hpc.ptPosition.Y);
 					bw.Write (hpc.ptPosition.Z);
 					
-					responseBuffers.Add (ms.ToArray ());
+					int msLength = ms.ToArray ().Length;
+					
+					byte[] ps = BitConverter.GetBytes (msLength);
+					
+					byte[] ba = new byte[6 + msLength];
+					ba[0] = 0;
+					ba[1] = 3;
+					ba[2] = ps[0];
+					ba[3] = ps[1];
+					ba[4] = ps[2];
+					ba[5] = ps[3];
+					ms.ToArray ().CopyTo (ba, 6);
+					
+					responseBuffers.Add (ba);
 				}
 				
 				if (responseBuffers.ToArray ().Length == 0) {
 					
-					byte[] ba = new byte[6];
-					
+					byte[] ba = new byte[10];
+					byte[] ps = BitConverter.GetBytes ((int)4);
 					//camera data
 					ba[0] = 0;
 					//hand response
 					ba[1] = 3;
+					//packet size
+					ba[2] = ps[0];
+					ba[3] = ps[1];
+					ba[4] = ps[2];
+					ba[5] = ps[3];
 					//first int, tell it nID = 0
-					ba[2] = 0;
-					ba[3] = 0;
-					ba[4] = 0;
-					ba[5] = 0;
+					ba[6] = 0;
+					ba[7] = 0;
+					ba[8] = 0;
+					ba[9] = 0;
 					
 					responseBuffers.Add (ba);
 				}
@@ -216,9 +240,9 @@ namespace KinectOpenNIMono
 				try {
 					//blocks until a client sends a message
 					bytesRead = clientStream.Read (message, 0, 6);
-					Console.WriteLine ("Message recieved from client!");
+					//Console.WriteLine ("Message recieved from client!");
 				} catch {
-					Console.WriteLine ("Socket Error!");
+					//Console.WriteLine ("Socket Error!");
 					break;
 				}
 				
@@ -232,7 +256,7 @@ namespace KinectOpenNIMono
 				foreach (byte[] response in buffersToSend) {
 					clientStream.Write (response, 0, response.Length);
 					clientStream.Flush ();
-					Console.WriteLine ("Sent message to client!");
+					//Console.WriteLine ("Sent message to client!");
 				}
 				
 			}
