@@ -160,7 +160,7 @@
 		/*
 		 * Enable log console on TextField
 		 */
-		public function set logConsole(txt:TextField){
+		public function set logConsole(txt:TextField):void{
 			_debugging = true;
 			_console = txt;
 			_console.text = "=== Started console ===\n";
