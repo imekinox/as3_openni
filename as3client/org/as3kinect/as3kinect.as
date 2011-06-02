@@ -44,6 +44,7 @@
 		public static const GET_DEPTH:int = 0;
 		public static const GET_RGB:int = 1;
 		public static const GET_SKEL:int = 2;
+		public static const GET_HAND:int = 3;
 		
 		public static const IMG_WIDTH:int = 640;
 		public static const IMG_HEIGHT:int = 480;

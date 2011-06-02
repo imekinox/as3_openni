@@ -67,7 +67,7 @@ package org.as3kinect.objects {
 			this.r_foot = new  point3d();
 		}
 		
-		public function updateFromBytes(ba:ByteArray){
+		public function updateFromBytes(ba:ByteArray):void{
 			this.user_id = ba.readInt();
 			this.head.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());
 			this.neck.updatePoint(ba.readFloat(), ba.readFloat(), ba.readFloat());

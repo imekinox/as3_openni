@@ -1,4 +1,4 @@
-﻿/*
+/*
  * This file is part of the as3server Project. http://www.as3server.org
  *
  * Copyright (c) 2010 individual as3server contributors. See the CONTRIB file
@@ -35,6 +35,7 @@ package org.as3kinect.events
 		public static const ON_DEPTH:String = "ON_DEPTH";
 		public static const ON_DEBUG:String = "ON_DEBUG";
 		public static const ON_SKEL:String = "ON_SKEL";
+		public static const ON_HAND:String = "ON_HAND";
 		
 		public var data:*;
 		
